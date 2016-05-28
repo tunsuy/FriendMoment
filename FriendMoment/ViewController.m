@@ -8,6 +8,7 @@
 
 #import "ViewController.h"
 #import "RefrechIconView.h"
+#import "ActivityView.h"
 
 #define kBackViewHeight 150
 #define kFilterBtnWidth 50
@@ -16,6 +17,8 @@
 #define kRefrechIconViewWidth 25
 
 #define kRefrechIconViewMaxOffsetY 50
+
+#define kWMActivityViewSize 28.0
 
 @interface ViewController ()<UITableViewDataSource, UITableViewDelegate>
 
@@ -26,6 +29,9 @@
 @property (nonatomic, strong) RefrechIconView *refrechIconView;
 @property (nonatomic) RefrechState oldState;
 
+/** 第二种方式 */
+@property (nonatomic, strong) ActivityView *activityView;
+
 @end
 
 @implementation ViewController
@@ -34,13 +40,23 @@
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
     
-    _tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 44, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height-44) style:UITableViewStyleGrouped];
+    _tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 64, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height-64) style:UITableViewStyleGrouped];
     _tableView.dataSource = self;
     _tableView.delegate = self;
     [self.view addSubview:_tableView];
 
-    _refrechIconView = [[RefrechIconView alloc] initWithFrame:CGRectMake(kRefrechIconViewLeft, -kRefrechIconViewWidth+64, -kRefrechIconViewWidth, kRefrechIconViewWidth)];
-    [self.view addSubview:_refrechIconView];
+    /** 第一种方式 */
+//    _refrechIconView = [[RefrechIconView alloc] initWithFrame:CGRectMake(kRefrechIconViewLeft, -kRefrechIconViewWidth+64, -kRefrechIconViewWidth, kRefrechIconViewWidth)];
+//    [self.view addSubview:_refrechIconView];
+    
+    /** 第二种方式 */
+    __weak typeof(self) weakself = self;
+    _activityView = [[ActivityView alloc] initWithFrame:CGRectMake(15.0, -kWMActivityViewSize+64 , kWMActivityViewSize, kWMActivityViewSize)];
+    _activityView.scrollView = self.tableView;
+    _activityView.refreshRequest = ^(ActivityView *sender) {
+        [weakself pullDownRefreshData:sender];
+    };
+    [self.view addSubview:_activityView];
     
 //    _tableView.contentInset = UIEdgeInsetsMake(-30, 0, 0, 0);
     
@@ -156,6 +172,18 @@
         [_refrechIconView stopStaticAnimation];
         _refrechIconView.refrechState = RefrechStateDone;
         
+    });
+}
+
+/** 第二种方式 */
+#pragma mark - 
+- (void)pullDownRefreshData:(ActivityView *)sender {
+    __weak typeof(self) weakself = self;
+    dispatch_time_t refreshTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5*NSEC_PER_SEC));
+    dispatch_after(refreshTime, dispatch_get_main_queue(), ^(){
+        if ([weakself.activityView refresh]) {
+            [weakself.activityView endRefreshing];
+        }
     });
 }
 
